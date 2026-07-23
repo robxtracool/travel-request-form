@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Travel Request Form</title>
+<style>
+  :root{
+    --navy:#1F3864;
+    --navy-dark:#152546;
+    --light:#F2F2F2;
+    --line:#BFBFBF;
+    --grey:#595959;
+    --green:#1e7e34;
+    --red:#c0392b;
+    --amber:#c98a00;
+  }
+  *{box-sizing:border-box;}
+  body{
+    font-family:'Segoe UI', Calibri, Arial, sans-serif;
+    background:#ffffff;
+    color:#222;
+    margin:0;
+    padding:28px 36px 60px;
+    max-width:850px;
+    margin:0 auto;
+  }
+  h1{
+    color:var(--navy);
+    font-size:28px;
+    margin:0 0 4px;
+  }
+  .subtitle{
+    font-style:italic;
+    color:var(--grey);
+    font-size:13px;
+    padding-bottom:10px;
+    border-bottom:3px solid var(--navy);
+    margin:0 0 18px;
+  }
+  .meta-strip{
+    display:flex;
+    gap:16px;
+    background:var(--light);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:10px 14px;
+    margin-bottom:10px;
+    font-size:13px;
+    flex-wrap:wrap;
+  }
+  .meta-strip div{ display:flex; gap:6px; align-items:center; }
+  .meta-strip b{ color:var(--grey); }
+  .meta-strip span{ font-weight:600; color:var(--navy-dark); }
+
+  .admin-bar{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    background:#fff8e1;
+    border:1px solid #e0c46c;
+    border-radius:4px;
+    padding:8px 12px;
+    margin-bottom:16px;
+    font-size:12px;
+  }
+  #adminBtn{
+    background:var(--navy);
+    color:#fff;
+    padding:6px 14px;
+    font-size:12px;
+    border-radius:4px;
+    border:none;
+    cursor:pointer;
+    font-weight:600;
+    white-space:nowrap;
+  }
+  body.admin-mode #adminBtn{ background:var(--red); }
+  .admin-extra{ display:none; gap:8px; align-items:center; flex-wrap:wrap; }
+  body.admin-mode .admin-extra{ display:flex; }
+  .admin-extra em{ color:#7a5c00; font-style:italic; }
+  .admin-btn-sm{
+    background:#fff;
+    border:1px solid var(--navy);
+    color:var(--navy);
+    padding:5px 10px;
+    border-radius:4px;
+    font-size:11px;
+    cursor:pointer;
+    font-weight:600;
+    white-space:nowrap;
+  }
+  label.admin-btn-sm{ display:inline-block; }
+
+  section{ margin-top:22px; }
+  h2{
+    color:var(--navy);
+    font-size:13px;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    border-bottom:2px solid var(--navy);
+    padding-bottom:6px;
+    margin:0 0 12px;
+  }
+  .grid2{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px 14px;
+  }
+  .field{ display:flex; flex-direction:column; gap:3px; position:relative; }
+  .field.full{ grid-column:1 / -1; }
+  label{
+    font-size:11.5px;
+    font-weight:600;
+    color:#444;
+  }
+  input[type=text], input[type=email], input[type=tel], input[type=date],
+  input[type=number], select, textarea{
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:7px 9px;
+    font-size:13px;
+    font-family:inherit;
+    width:100%;
+    background:#fff;
+  }
+  textarea{ resize:vertical; min-height:60px; }
+  input:focus, select:focus, textarea:focus{
+    outline:2px solid var(--navy);
+    outline-offset:0;
+    border-color:var(--navy);
+  }
+  input:invalid:not(:placeholder-shown){ border-color:var(--red); }
+
+  [contenteditable="true"]{ border-radius:3px; }
+  [contenteditable="true"]:hover, [contenteditable="true"]:focus{
+    outline:1px dashed var(--navy);
+    background:#eef2f8;
+    cursor:text;
+  }
+
+  .admin-toolbar{
+    display:none;
+    position:absolute;
+    top:-8px;
+    right:-6px;
+    gap:5px;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:2px 6px;
+    align-items:center;
+    box-shadow:0 1px 2px rgba(0,0,0,.08);
+    z-index:2;
+  }
+  body.admin-mode .admin-toolbar{ display:flex; }
+  .req-toggle{
+    display:flex;
+    align-items:center;
+    gap:2px;
+    font-size:9px;
+    color:var(--grey);
+    font-weight:700;
+    text-transform:uppercase;
+  }
+  .req-toggle input{ width:auto; margin:0; }
+  .field-remove{
+    background:none;
+    border:none;
+    color:var(--red);
+    cursor:pointer;
+    font-size:12px;
+    font-weight:700;
+    padding:0 2px;
+    line-height:1;
+  }
+  .row-remove{ display:none; margin-left:6px; }
+  body.admin-mode .row-remove{ display:inline-block; }
+  .need-remove{
+    display:none;
+    margin-left:auto;
+    padding-left:6px;
+  }
+  body.admin-mode .need-remove{ display:inline-block; }
+
+  .add-field-btn, .add-row-note, .add-need-wrap{ display:none; }
+  body.admin-mode .add-field-btn{ display:inline-flex; }
+  body.admin-mode .add-row-note{ display:block; }
+  body.admin-mode .add-need-wrap{ display:flex; }
+  .add-field-btn{
+    align-items:center;
+    justify-content:center;
+    border:1.5px dashed var(--navy);
+    color:var(--navy);
+    background:#f5f8fc;
+    border-radius:4px;
+    padding:9px;
+    font-size:12px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .add-need-wrap{ align-items:center; }
+
+  .checkgrid{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:10px;
+  }
+  .checkitem{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:9px 10px;
+    font-size:12.5px;
+    position:relative;
+  }
+  .checkitem input{ width:auto; }
+  .cost-table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+  }
+  .cost-table th{
+    background:var(--navy);
+    color:#fff;
+    text-align:left;
+    padding:8px 10px;
+    font-size:11.5px;
+    letter-spacing:.3px;
+  }
+  .cost-table td{
+    border:1px solid var(--line);
+    padding:6px 8px;
+  }
+  .cost-table input[type=number]{ text-align:right; }
+  .cost-table tfoot td{
+    background:var(--light);
+    font-weight:700;
+  }
+  .cost-row-notes{ display:flex; align-items:center; gap:6px; }
+  .cost-row-notes input{ flex:1; }
+  #totalCost{ font-weight:700; color:var(--navy-dark); }
+  .duration-note{
+    font-size:12px;
+    color:var(--grey);
+    margin-top:4px;
+  }
+  .duration-note b{ color:var(--navy-dark); }
+  .actions{
+    display:flex;
+    gap:10px;
+    margin-top:28px;
+    flex-wrap:wrap;
+  }
+  button{
+    border:none;
+    border-radius:4px;
+    padding:11px 22px;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  #submitBtn{ background:var(--navy); color:#fff; }
+  #submitBtn:hover{ background:var(--navy-dark); }
+  #submitBtn:disabled{
+    background:#b9c2cf;
+    color:#eef1f5;
+    cursor:not-allowed;
+  }
+  #submitBtn:disabled:hover{ background:#b9c2cf; }
+  .submit-hint{
+    font-size:11.5px;
+    color:var(--grey);
+    display:flex;
+    align-items:center;
+    margin-left:2px;
+  }
+  #printBtn{ background:#fff; color:var(--navy); border:1px solid var(--navy); }
+  #printBtn:hover{ background:var(--light); }
+  #resetBtn{ background:#fff; color:var(--red); border:1px solid var(--red); }
+  #resetBtn:hover{ background:#fdecea; }
+  #status{
+    margin-top:16px;
+    padding:12px 16px;
+    border-radius:4px;
+    font-size:13px;
+    display:none;
+  }
+  #status.ok{
+    display:block;
+    background:#e8f5e9;
+    border:1px solid var(--green);
+    color:#1b5e20;
+  }
+  #status.err{
+    display:block;
+    background:#fdecea;
+    border:1px solid var(--red);
+    color:#8e2418;
+  }
+  footer{
+    margin-top:30px;
+    text-align:center;
+    font-size:11px;
+    color:#999;
+    font-style:italic;
+  }
+  .approval-note{
+    font-size:12px;
+    color:var(--grey);
+    margin:0 0 12px;
+  }
+  .approval-grid{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:12px;
+  }
+  .approval-card{
+    border:1px solid var(--line);
+    border-radius:5px;
+    padding:12px;
+    background:#fff;
+    transition:opacity .15s;
+  }
+  .approval-card-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:8px;
+  }
+  .approval-card-head h3{
+    margin:0;
+    font-size:12.5px;
+    color:var(--navy-dark);
+  }
+  .badge{
+    font-size:9.5px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.4px;
+    padding:2px 7px;
+    border-radius:10px;
+    white-space:nowrap;
+  }
+  .badge.required{ background:#fde9e9; color:var(--red); }
+  .approval-card .field{ margin-bottom:8px; }
+  .approval-card .field:last-child{ margin-bottom:0; }
+  .approval-card textarea{ min-height:38px; font-size:12px; }
+  select.decision{ font-weight:600; }
+  select.decision.status-approved{ color:var(--green); border-color:var(--green); }
+  select.decision.status-rejected{ color:var(--red); border-color:var(--red); }
+  select.decision.status-pending{ color:#8a6d00; border-color:#d9b100; }
+  .required-mark{ color:var(--red); }
+  .upload-box{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:4px;
+    text-align:center;
+    border:2px dashed var(--line);
+    border-radius:6px;
+    padding:26px 16px;
+    cursor:pointer;
+    background:var(--light);
+    position:relative;
+    transition:border-color .15s, background .15s;
+  }
+  .upload-box:hover, .upload-box.dragover{
+    border-color:var(--navy);
+    background:#eef2f8;
+  }
+  .upload-box.has-error{ border-color:var(--red); background:#fdecea; }
+  .upload-icon{ font-size:22px; color:var(--navy); }
+  .upload-text{ font-size:13px; color:#333; }
+  .upload-sub{ font-size:11px; color:var(--grey); }
+  .upload-box input[type=file]{
+    position:absolute;
+    inset:0;
+    opacity:0;
+    cursor:pointer;
+    width:100%;
+    height:100%;
+  }
+  .file-list{
+    list-style:none;
+    margin:10px 0 0;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .file-item{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:7px 10px;
+    font-size:12.5px;
+    background:#fff;
+  }
+  .file-item .file-name{ color:#222; }
+  .file-item .file-size{ color:var(--grey); font-size:11px; }
+  .file-item button{
+    background:none;
+    border:none;
+    color:var(--red);
+    cursor:pointer;
+    font-size:12px;
+    font-weight:700;
+    padding:2px 6px;
+  }
+  .file-item button:hover{ text-decoration:underline; }
+  @media print{
+    .actions, #status, .admin-bar, .admin-toolbar, .add-field-btn, .add-need-wrap, .add-row-note, .row-remove, .need-remove{ display:none !important; }
+    body{ padding:0; }
+  }
+  @media (max-width: 700px){
+    .approval-grid{ grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Travel Request Form</h1>
+<p class="subtitle">Complete all applicable fields — totals and trip length calculate automatically as you type.</p>
+
+<div class="meta-strip">
+  <div><b>Request #:</b> <span id="reqNum"></span></div>
+  <div><b>Date Submitted:</b> <span id="reqDate"></span></div>
+</div>
+
+<div class="admin-bar">
+  <button type="button" id="adminBtn">Administrator</button>
+  <span class="admin-extra">
+    <em>Admin Mode: click any heading or field label to rename it, use ✕ to remove a field, and "+ Add…" to add one. This gate is client-side only — don't rely on it to protect sensitive data.</em>
+    <button type="button" class="admin-btn-sm" id="exportConfigBtn">Export Form Layout</button>
+    <label class="admin-btn-sm" for="importConfigInput">Import Form Layout</label>
+    <input type="file" id="importConfigInput" accept="application/json" style="display:none">
+  </span>
+</div>
+
+<form id="travelForm" novalidate>
+
+  <section>
+    <h2>Traveler Information</h2>
+    <div class="grid2">
+      <div class="field"><label>Employee Name *</label><input type="text" name="employeeName" required></div>
+      <div class="field"><label>Employee ID</label><input type="text" name="employeeId"></div>
+      <div class="field"><label>Department</label><input type="text" name="department"></div>
+      <div class="field"><label>Job Title</label><input type="text" name="jobTitle"></div>
+      <div class="field"><label>Manager / Approver *</label><input type="text" name="manager" required></div>
+      <div class="field"><label>Email *</label><input type="email" name="email" required></div>
+      <div class="field"><label>Phone</label><input type="tel" name="phone"></div>
+      <div class="field"><label>Cost Center</label><input type="text" name="costCenter"></div>
+      <button type="button" class="add-field-btn field full">+ Add Field</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Trip Details</h2>
+    <div class="grid2">
+      <div class="field"><label>Departure City *</label><input type="text" name="fromCity" required></div>
+      <div class="field"><label>Destination City *</label><input type="text" name="toCity" required></div>
+      <div class="field"><label>Departure Date *</label><input type="date" name="departDate" required></div>
+      <div class="field"><label>Return Date *</label><input type="date" name="returnDate" required></div>
+      <div class="field full"><label>Purpose of Trip *</label><input type="text" name="purpose" required></div>
+      <div class="field full"><label>Conference / Event Name (if applicable)</label><input type="text" name="eventName"></div>
+      <button type="button" class="add-field-btn field full">+ Add Field</button>
+    </div>
+    <div class="duration-note">Trip length: <b id="tripLength">—</b></div>
+  </section>
+
+  <section>
+    <h2>Travel Needs</h2>
+    <div class="checkgrid">
+      <label class="checkitem"><input type="checkbox" name="needs" value="Airfare"> <span class="need-text">Airfare</span></label>
+      <label class="checkitem"><input type="checkbox" name="needs" value="Hotel / Lodging"> <span class="need-text">Hotel / Lodging</span></label>
+      <label class="checkitem"><input type="checkbox" name="needs" value="Rental Car"> <span class="need-text">Rental Car</span></label>
+      <label class="checkitem"><input type="checkbox" name="needs" value="Rail / Train"> <span class="need-text">Rail / Train</span></label>
+      <label class="checkitem"><input type="checkbox" name="needs" value="Ground Transport / Taxi"> <span class="need-text">Ground Transport / Taxi</span></label>
+      <label class="checkitem"><input type="checkbox" name="needs" value="Parking"> <span class="need-text">Parking</span></label>
+      <label class="checkitem"><input type="checkbox" name="needs" value="Meals & Incidentals"> <span class="need-text">Meals & Incidentals</span></label>
+      <label class="checkitem"><input type="checkbox" name="needs" value="Other"> <span class="need-text">Other</span></label>
+    </div>
+    <div class="add-need-wrap"><button type="button" class="add-field-btn add-need-btn">+ Add Travel Need</button></div>
+  </section>
+
+  <section>
+    <h2>Estimated Costs</h2>
+    <table class="cost-table">
+      <thead>
+        <tr><th style="width:50%">Expense Category</th><th style="width:25%">Estimated Cost ($)</th><th style="width:25%">Notes</th></tr>
+      </thead>
+      <tbody id="costRows">
+        <tr><td class="cost-label">Airfare / Rail</td><td><input type="number" class="cost" min="0" step="0.01" value="0"></td><td class="cost-row-notes"><input type="text"></td></tr>
+        <tr><td class="cost-label">Hotel / Lodging</td><td><input type="number" class="cost" min="0" step="0.01" value="0"></td><td class="cost-row-notes"><input type="text"></td></tr>
+        <tr><td class="cost-label">Ground Transport / Rental Car</td><td><input type="number" class="cost" min="0" step="0.01" value="0"></td><td class="cost-row-notes"><input type="text"></td></tr>
+        <tr><td class="cost-label">Meals & Incidentals</td><td><input type="number" class="cost" min="0" step="0.01" value="0"></td><td class="cost-row-notes"><input type="text"></td></tr>
+        <tr><td class="cost-label">Registration / Conference Fees</td><td><input type="number" class="cost" min="0" step="0.01" value="0"></td><td class="cost-row-notes"><input type="text"></td></tr>
+        <tr><td class="cost-label">Other</td><td><input type="number" class="cost" min="0" step="0.01" value="0"></td><td class="cost-row-notes"><input type="text"></td></tr>
+      </tbody>
+      <tfoot>
+        <tr><td>Total Estimated Cost</td><td id="totalCost">$0.00</td><td></td></tr>
+      </tfoot>
+    </table>
+    <p class="add-row-note"><button type="button" class="add-field-btn add-row-btn">+ Add Expense Row</button></p>
+  </section>
+
+  <section>
+    <h2>Upload Cost Comparison Documents <span class="required-mark">*</span></h2>
+    <p class="approval-note">Attach at least one supporting document (e.g. flight/hotel quotes, screenshots, or a comparison spreadsheet) backing the estimated costs above. Accepted: PDF, Word, Excel, or image files.</p>
+    <label class="upload-box" id="uploadBox" for="costDocs">
+      <span class="upload-icon">⬆</span>
+      <span class="upload-text"><b>Click to choose files</b> or drag and drop here</span>
+      <span class="upload-sub">PDF, DOC/DOCX, XLS/XLSX, PNG, JPG — multiple files allowed</span>
+      <input type="file" id="costDocs" name="costDocs" multiple required
+        accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg">
+    </label>
+    <ul class="file-list" id="fileList"></ul>
+  </section>
+
+  <section>
+    <h2>Funding &amp; Comments</h2>
+    <div class="grid2">
+      <div class="field"><label>Funding Source / Budget Code</label><input type="text" name="fundingSource"></div>
+      <div class="field">
+        <label>Payment Method</label>
+        <select name="paymentMethod">
+          <option value="">Select…</option>
+          <option>Corporate Card</option>
+          <option>Personal Card (reimbursement)</option>
+          <option>Direct Bill</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="field full"><label>Additional Comments</label><textarea name="comments"></textarea></div>
+      <button type="button" class="add-field-btn field full">+ Add Field</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Approval Workflow</h2>
+    <p class="approval-note">All three levels are required. Each approver completes their box in turn as the request is routed. (Admin Mode: click a level title to rename it.)</p>
+    <div class="approval-grid">
+      <div class="approval-card" id="level1Card">
+        <div class="approval-card-head">
+          <h3>Level 1 — Task Lead</h3>
+          <span class="badge required" id="level1Badge">Required</span>
+        </div>
+        <div class="field"><label>Approver Name</label><input type="text" name="level1Name"></div>
+        <div class="field"><label>Decision</label>
+          <select name="level1Decision" class="decision status-pending">
+            <option value="Pending">Pending</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </div>
+        <div class="field"><label>Date</label><input type="date" name="level1Date"></div>
+        <div class="field"><label>Comments</label><textarea name="level1Comments"></textarea></div>
+      </div>
+
+      <div class="approval-card" id="level2Card">
+        <div class="approval-card-head">
+          <h3>Level 2 — Program Manager</h3>
+          <span class="badge required" id="level2Badge">Required</span>
+        </div>
+        <div class="field"><label>Approver Name</label><input type="text" name="level2Name"></div>
+        <div class="field"><label>Decision</label>
+          <select name="level2Decision" class="decision status-pending">
+            <option value="Pending">Pending</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </div>
+        <div class="field"><label>Date</label><input type="date" name="level2Date"></div>
+        <div class="field"><label>Comments</label><textarea name="level2Comments"></textarea></div>
+      </div>
+
+      <div class="approval-card" id="level3Card">
+        <div class="approval-card-head">
+          <h3>Level 3 — Technical Customer</h3>
+          <span class="badge required" id="level3Badge">Required</span>
+        </div>
+        <div class="field"><label>Approver Name</label><input type="text" name="level3Name"></div>
+        <div class="field"><label>Decision</label>
+          <select name="level3Decision" class="decision status-pending">
+            <option value="Pending">Pending</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </div>
+        <div class="field"><label>Date</label><input type="date" name="level3Date"></div>
+        <div class="field"><label>Comments</label><textarea name="level3Comments"></textarea></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="actions">
+    <button type="submit" id="submitBtn" disabled>Submit Request</button>
+    <button type="button" id="printBtn">Print / Save as PDF</button>
+    <button type="reset" id="resetBtn">Reset Form</button>
+    <span class="submit-hint" id="submitHint">Complete all required fields (*) and upload at least one document to enable submission.</span>
+  </div>
+
+  <div id="status"></div>
+</form>
+
+<footer>Submit this form to your manager and Finance/HR prior to booking any travel.</footer>
+
+<script>
+(function(){
+  var form = document.getElementById('travelForm');
+  var status = document.getElementById('status');
+  var totalEl = document.getElementById('totalCost');
+  var fileListEl = document.getElementById('fileList');
+  var selectedFiles = [];
+
+  // ---- Submit button gating ----
+  function updateSubmitState(){
+    var submitBtn = document.getElementById('submitBtn');
+    var hint = document.getElementById('submitHint');
+    if(!submitBtn) return;
+    var valid = form.checkValidity() && selectedFiles.length > 0;
+    submitBtn.disabled = !valid;
+    if(hint) hint.style.display = valid ? 'none' : 'flex';
+  }
+  var ADMIN_PASSCODE = 'admin123';
+  var adminMode = false;
+
+  // ---- Request metadata ----
+  var today = new Date();
+  document.getElementById('reqDate').textContent = today.toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('reqNum').textContent =
+    'TRV-' + today.getFullYear() +
+    String(today.getMonth()+1).padStart(2,'0') +
+    String(today.getDate()).padStart(2,'0') +
+    '-' + Math.floor(1000 + Math.random()*9000);
+
+  // ---- Totals (delegated, re-queries live so admin-added rows count) ----
+  function recalcTotal(){
+    var total = 0;
+    form.querySelectorAll('.cost').forEach(function(inp){
+      var v = parseFloat(inp.value);
+      if(!isNaN(v)) total += v;
+    });
+    totalEl.textContent = '$' + total.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+  recalcTotal();
+
+  // ---- Trip length ----
+  function recalcTrip(){
+    var departEl = form.querySelector('[name=departDate]');
+    var returnEl = form.querySelector('[name=returnDate]');
+    var lengthEl = document.getElementById('tripLength');
+    if(!departEl || !returnEl || !lengthEl) return;
+    if(departEl.value && returnEl.value){
+      var d1 = new Date(departEl.value);
+      var d2 = new Date(returnEl.value);
+      var days = Math.round((d2 - d1) / 86400000);
+      if(days < 0){
+        lengthEl.textContent = 'Return date is before departure date';
+        lengthEl.style.color = 'var(--red)';
+      } else {
+        lengthEl.textContent = days + (days === 1 ? ' day' : ' days') + ' / ' + Math.max(days-1,0) + (days-1===1 ? ' night' : ' nights');
+        lengthEl.style.color = 'var(--navy-dark)';
+      }
+    } else {
+      lengthEl.textContent = '—';
+      lengthEl.style.color = 'var(--navy-dark)';
+    }
+  }
+  recalcTrip();
+
+  // ---- Decision select status colors ----
+  function updateDecisionClass(sel){
+    sel.classList.remove('status-pending','status-approved','status-rejected');
+    sel.classList.add('status-' + sel.value.toLowerCase());
+  }
+  form.querySelectorAll('select.decision').forEach(updateDecisionClass);
+
+  // ---- Cost comparison document upload ----
+  function formatSize(bytes){
+    if(bytes < 1024) return bytes + ' B';
+    if(bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+    return (bytes/(1024*1024)).toFixed(1) + ' MB';
+  }
+  function currentFileInput(){ return document.getElementById('costDocs'); }
+  function currentUploadBox(){ return document.getElementById('uploadBox'); }
+  function syncInputFiles(){
+    var fi = currentFileInput();
+    if(!fi) return;
+    var dt = new DataTransfer();
+    selectedFiles.forEach(function(f){ dt.items.add(f); });
+    fi.files = dt.files;
+    var box = currentUploadBox();
+    if(box) box.classList.toggle('has-error', selectedFiles.length === 0);
+  }
+  function renderFileList(){
+    var list = document.getElementById('fileList');
+    if(!list) return;
+    list.innerHTML = '';
+    selectedFiles.forEach(function(file, idx){
+      var li = document.createElement('li');
+      li.className = 'file-item';
+      var left = document.createElement('span');
+      left.innerHTML = '<span class="file-name">' + file.name + '</span> ' +
+        '<span class="file-size">(' + formatSize(file.size) + ')</span>';
+      var removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.textContent = 'Remove';
+      removeBtn.addEventListener('click', function(){
+        selectedFiles.splice(idx, 1);
+        syncInputFiles();
+        renderFileList();
+        updateSubmitState();
+      });
+      li.appendChild(left);
+      li.appendChild(removeBtn);
+      list.appendChild(li);
+    });
+  }
+  function addFiles(fileArray){
+    fileArray.forEach(function(f){
+      var exists = selectedFiles.some(function(sf){ return sf.name === f.name && sf.size === f.size; });
+      if(!exists) selectedFiles.push(f);
+    });
+    syncInputFiles();
+    renderFileList();
+    updateSubmitState();
+  }
+
+  // ---- Admin controls retrofit (idempotent: safe to re-run after import) ----
+  function addAdminControls(){
+    form.querySelectorAll('.grid2 > .field').forEach(function(field){
+      var input = field.querySelector('input, select, textarea');
+      if(!input || field.querySelector('.admin-toolbar')) return;
+      var toolbar = document.createElement('span');
+      toolbar.className = 'admin-toolbar';
+      toolbar.innerHTML =
+        '<label class="req-toggle"><input type="checkbox" class="required-toggle"' + (input.required ? ' checked' : '') + '>Req</label>' +
+        '<button type="button" class="field-remove" title="Remove field">✕</button>';
+      field.appendChild(toolbar);
+    });
+    form.querySelectorAll('#costRows tr').forEach(function(tr){
+      var notesTd = tr.children[2];
+      if(notesTd && !notesTd.querySelector('.row-remove')){
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'field-remove row-remove';
+        btn.title = 'Remove row';
+        btn.textContent = '✕';
+        notesTd.appendChild(btn);
+      }
+    });
+    form.querySelectorAll('.checkgrid .checkitem').forEach(function(item){
+      if(item.querySelector('.need-remove')) return;
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'field-remove need-remove';
+      btn.title = 'Remove';
+      btn.textContent = '✕';
+      item.appendChild(btn);
+    });
+  }
+  addAdminControls();
+  updateSubmitState();
+
+  // ---- Admin mode toggle ----
+  function setAdminMode(on){
+    adminMode = on;
+    document.body.classList.toggle('admin-mode', on);
+    document.getElementById('adminBtn').textContent = on ? 'Exit Admin Mode' : 'Administrator';
+    document.querySelectorAll('h2, .grid2 > .field > label, .approval-card-head h3, .need-text, #costRows .cost-label')
+      .forEach(function(el){ el.contentEditable = on ? 'true' : 'false'; });
+  }
+  document.getElementById('adminBtn').addEventListener('click', function(){
+    if(!adminMode){
+      var pass = window.prompt('Enter administrator passcode:');
+      if(pass === null) return;
+      if(pass !== ADMIN_PASSCODE){ window.alert('Incorrect passcode.'); return; }
+      setAdminMode(true);
+    } else {
+      setAdminMode(false);
+    }
+  });
+
+  // ---- Export / import form layout (JSON, no browser storage used) ----
+  document.getElementById('exportConfigBtn').addEventListener('click', function(){
+    var payload = { formHTML: form.innerHTML, exportedAt: new Date().toISOString() };
+    var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'travel-form-layout.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+  document.getElementById('importConfigInput').addEventListener('change', function(e){
+    var file = e.target.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      try{
+        var data = JSON.parse(reader.result);
+        if(!data.formHTML) throw new Error('missing formHTML');
+        form.innerHTML = data.formHTML;
+        selectedFiles = [];
+        recalcTotal();
+        recalcTrip();
+        form.querySelectorAll('select.decision').forEach(updateDecisionClass);
+        renderFileList();
+        addAdminControls();
+        setAdminMode(adminMode);
+        updateSubmitState();
+        status.className = 'ok';
+        status.textContent = 'Form layout imported successfully.';
+      }catch(err){
+        window.alert('That file is not a valid form layout export.');
+      }
+      e.target.value = '';
+    };
+    reader.readAsText(file);
+  });
+
+  // ---- Delegated events on the form (survive admin edits/imports) ----
+  form.addEventListener('input', function(e){
+    if(e.target.classList.contains('cost')) recalcTotal();
+    updateSubmitState();
+  });
+
+  form.addEventListener('change', function(e){
+    var t = e.target;
+    if(t.name === 'departDate' || t.name === 'returnDate') recalcTrip();
+    if(t.classList.contains('decision')) updateDecisionClass(t);
+    if(t.id === 'costDocs') addFiles(Array.from(t.files));
+    if(t.classList.contains('required-toggle')){
+      var input = t.closest('.field').querySelector('input, select, textarea');
+      if(input) input.required = t.checked;
+    }
+    updateSubmitState();
+  });
+
+  form.addEventListener('dragover', function(e){
+    if(e.target.closest('#uploadBox')){
+      e.preventDefault();
+      currentUploadBox().classList.add('dragover');
+    }
+  });
+  form.addEventListener('dragleave', function(e){
+    if(e.target.closest('#uploadBox')) currentUploadBox().classList.remove('dragover');
+  });
+  form.addEventListener('drop', function(e){
+    if(e.target.closest('#uploadBox')){
+      e.preventDefault();
+      currentUploadBox().classList.remove('dragover');
+      if(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length){
+        addFiles(Array.from(e.dataTransfer.files));
+      }
+    }
+  });
+
+  form.addEventListener('click', function(e){
+    var t = e.target;
+
+    if(t.classList.contains('field-remove')){
+      e.preventDefault();
+      var wrap = t.closest('.field') || t.closest('tr') || t.closest('.checkitem');
+      if(wrap) wrap.remove();
+      recalcTotal();
+      updateSubmitState();
+      return;
+    }
+
+    if(t.classList.contains('add-row-btn')){
+      e.preventDefault();
+      var rowLabel = window.prompt('New expense category label:', 'New Item');
+      if(!rowLabel) return;
+      var tbody = document.getElementById('costRows');
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td class="cost-label"' + (adminMode ? ' contenteditable="true"' : '') + '>' + rowLabel + '</td>' +
+        '<td><input type="number" class="cost" min="0" step="0.01" value="0"></td>' +
+        '<td class="cost-row-notes"><input type="text"><button type="button" class="field-remove row-remove" title="Remove row">✕</button></td>';
+      tbody.appendChild(tr);
+      recalcTotal();
+      updateSubmitState();
+      return;
+    }
+
+    if(t.classList.contains('add-need-btn')){
+      e.preventDefault();
+      var needLabel = window.prompt('New travel need label:');
+      if(!needLabel) return;
+      var grid = form.querySelector('.checkgrid');
+      var item = document.createElement('label');
+      item.className = 'checkitem';
+      var safeVal = needLabel.replace(/"/g, '&quot;');
+      item.innerHTML =
+        '<input type="checkbox" name="needs" value="' + safeVal + '"> ' +
+        '<span class="need-text"' + (adminMode ? ' contenteditable="true"' : '') + '>' + needLabel + '</span>' +
+        '<button type="button" class="field-remove need-remove" title="Remove">✕</button>';
+      grid.appendChild(item);
+      updateSubmitState();
+      return;
+    }
+
+    if(t.classList.contains('add-field-btn') && !t.classList.contains('add-need-btn') && !t.classList.contains('add-row-btn')){
+      e.preventDefault();
+      var fieldLabel = window.prompt('New field label:');
+      if(!fieldLabel) return;
+      var grid2 = t.closest('.grid2');
+      var name = 'custom_' + fieldLabel.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'') + '_' + Date.now();
+      var div = document.createElement('div');
+      div.className = 'field';
+      div.innerHTML =
+        '<label' + (adminMode ? ' contenteditable="true"' : '') + '>' + fieldLabel + '</label>' +
+        '<input type="text" name="' + name + '">' +
+        '<span class="admin-toolbar"><label class="req-toggle"><input type="checkbox" class="required-toggle">Req</label>' +
+        '<button type="button" class="field-remove" title="Remove field">✕</button></span>';
+      grid2.insertBefore(div, t);
+      updateSubmitState();
+      return;
+    }
+  });
+
+  document.getElementById('printBtn').addEventListener('click', function(){
+    window.print();
+  });
+
+  form.addEventListener('reset', function(){
+    selectedFiles = [];
+    setTimeout(function(){
+      renderFileList();
+      updateSubmitState();
+    }, 0);
+  });
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    if(!form.checkValidity() || selectedFiles.length === 0){
+      form.reportValidity();
+      var box = currentUploadBox();
+      if(box) box.classList.toggle('has-error', selectedFiles.length === 0);
+      status.className = 'err';
+      status.textContent = selectedFiles.length === 0
+        ? 'Please upload at least one cost comparison document before submitting.'
+        : 'Please complete all required fields (marked with *) before submitting.';
+      return;
+    }
+    var needs = Array.from(form.querySelectorAll('[name=needs]:checked')).map(function(c){return c.value;});
+    var data = new FormData(form);
+    var summary = 'Traveler: ' + data.get('employeeName') +
+      ' | Trip: ' + data.get('fromCity') + ' → ' + data.get('toCity') +
+      ' | ' + data.get('departDate') + ' to ' + data.get('returnDate') +
+      ' | Needs: ' + (needs.length ? needs.join(', ') : 'none selected') +
+      ' | Total est. cost: ' + totalEl.textContent +
+      ' | Documents attached: ' + selectedFiles.length;
+    status.className = 'ok';
+    status.innerHTML = '<b>Request ' + document.getElementById('reqNum').textContent + ' is ready.</b><br>' +
+      summary + '<br><br>Route this request through Level 1 (Task Lead), Level 2 (Program Manager), and Level 3 (Technical Customer) in order, then use "Print / Save as PDF" to generate a copy for your records — this page does not submit anywhere on its own.';
+  });
+})();
+</script>
+
+</body>
+</html>
