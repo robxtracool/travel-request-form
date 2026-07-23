@@ -962,9 +962,42 @@
       ' | Needs: ' + (needs.length ? needs.join(', ') : 'none selected') +
       ' | Total est. cost: ' + totalEl.textContent +
       ' | Documents attached: ' + selectedFiles.length;
+
+    var WEBHOOK_URL = 'https://hooks.zapier.com/hooks/catch/28337791/44k29x8/';
+    var payload = {
+      requestNum: document.getElementById('reqNum').textContent,
+      dateSubmitted: document.getElementById('reqDate').textContent,
+      employeeName: data.get('employeeName'),
+      manager: data.get('manager'),
+      email: data.get('email'),
+      fromCity: data.get('fromCity'),
+      toCity: data.get('toCity'),
+      departDate: data.get('departDate'),
+      returnDate: data.get('returnDate'),
+      purpose: data.get('purpose'),
+      needs: needs.join(', '),
+      totalCost: totalEl.textContent,
+      documentsAttached: selectedFiles.length,
+      formLink: window.location.href
+    };
+
     status.className = 'ok';
-    status.innerHTML = '<b>Request ' + document.getElementById('reqNum').textContent + ' is ready.</b><br>' +
-      summary + '<br><br>Route this request through Level 1 (Task Lead), Level 2 (Program Manager), and Level 3 (Technical Customer) in order, then use "Print / Save as PDF" to generate a copy for your records — this page does not submit anywhere on its own.';
+    status.innerHTML = '<b>Request ' + payload.requestNum + ' is ready.</b><br>' +
+      summary + '<br><br>Sending this request to Level 1 (Task Lead) for approval&hellip;';
+
+    fetch(WEBHOOK_URL, {
+      method: 'POST',
+      mode: 'cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(function(){
+      status.innerHTML = '<b>Request ' + payload.requestNum + ' submitted.</b><br>' +
+        summary + '<br><br>Level 1 (Task Lead) has been notified by email. Once approved, the request will automatically route to Level 2 (Program Manager), then Level 3 (Technical Customer). Use "Print / Save as PDF" to keep a copy for your records.';
+    }).catch(function(){
+      status.className = 'err';
+      status.innerHTML = '<b>Request ' + payload.requestNum + ' was validated, but the approval notification failed to send.</b><br>' +
+        'Please contact the Task Lead directly, or try submitting again.';
+    });
   });
 })();
 </script>
