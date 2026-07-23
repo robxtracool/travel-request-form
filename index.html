@@ -985,11 +985,13 @@
     status.innerHTML = '<b>Request ' + payload.requestNum + ' is ready.</b><br>' +
       summary + '<br><br>Sending this request to Level 1 (Task Lead) for approval&hellip;';
 
+    var formBody = new URLSearchParams();
+    Object.keys(payload).forEach(function(k){ formBody.append(k, payload[k]); });
+
     fetch(WEBHOOK_URL, {
       method: 'POST',
       mode: 'cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: formBody
     }).then(function(){
       status.innerHTML = '<b>Request ' + payload.requestNum + ' submitted.</b><br>' +
         summary + '<br><br>Level 1 (Task Lead) has been notified by email. Once approved, the request will automatically route to Level 2 (Program Manager), then Level 3 (Technical Customer). Use "Print / Save as PDF" to keep a copy for your records.';
