@@ -345,6 +345,25 @@
     white-space:nowrap;
   }
   .badge.required{ background:#fde9e9; color:var(--red); }
+  .approve-deny-row{ display:flex; gap:8px; margin-top:10px; }
+  .approve-btn, .deny-btn{
+    flex:1;
+    padding:8px;
+    font-size:12px;
+    border-radius:4px;
+    color:#fff;
+    font-weight:700;
+  }
+  .approve-btn{ background:var(--green); }
+  .approve-btn:disabled{ background:#c8e6c9; color:#5b8a5f; cursor:not-allowed; }
+  .deny-btn{ background:var(--red); }
+  .deny-btn:disabled{ background:#f5c6c0; color:#a67971; cursor:not-allowed; }
+  body.review-mode input:disabled, body.review-mode select:disabled, body.review-mode textarea:disabled{
+    background:#f2f2f2;
+    color:#444;
+    opacity:1;
+    -webkit-text-fill-color:#444;
+  }
   .approval-card .field{ margin-bottom:8px; }
   .approval-card .field:last-child{ margin-bottom:0; }
   .approval-card textarea{ min-height:38px; font-size:12px; }
@@ -562,6 +581,10 @@
         </div>
         <div class="field"><label>Date</label><input type="date" name="level1Date"></div>
         <div class="field"><label>Comments</label><textarea name="level1Comments"></textarea></div>
+        <div class="approve-deny-row">
+          <button type="button" class="approve-btn" disabled>Approve</button>
+          <button type="button" class="deny-btn" disabled>Deny</button>
+        </div>
       </div>
 
       <div class="approval-card" id="level2Card">
@@ -579,6 +602,10 @@
         </div>
         <div class="field"><label>Date</label><input type="date" name="level2Date"></div>
         <div class="field"><label>Comments</label><textarea name="level2Comments"></textarea></div>
+        <div class="approve-deny-row">
+          <button type="button" class="approve-btn" disabled>Approve</button>
+          <button type="button" class="deny-btn" disabled>Deny</button>
+        </div>
       </div>
 
       <div class="approval-card" id="level3Card">
@@ -596,6 +623,10 @@
         </div>
         <div class="field"><label>Date</label><input type="date" name="level3Date"></div>
         <div class="field"><label>Comments</label><textarea name="level3Comments"></textarea></div>
+        <div class="approve-deny-row">
+          <button type="button" class="approve-btn" disabled>Approve</button>
+          <button type="button" class="deny-btn" disabled>Deny</button>
+        </div>
       </div>
     </div>
   </section>
@@ -631,6 +662,139 @@
   }
   var ADMIN_PASSCODE = 'admin123';
   var adminMode = false;
+
+  // ---- Level-specific approval webhooks ----
+  var APPROVE_WEBHOOKS = {
+    1: 'https://hooks.zapier.com/hooks/catch/28337791/REPLACE_L1/',
+    2: 'https://hooks.zapier.com/hooks/catch/28337791/REPLACE_L2/',
+    3: 'https://hooks.zapier.com/hooks/catch/28337791/REPLACE_L3/'
+  };
+  var ROLE_LABELS = { 1: 'Task Lead', 2: 'Program Manager', 3: 'Technical Customer' };
+
+  // ---- Unicode-safe base64 helpers (state travels inside the review link) ----
+  function b64EncodeUnicode(str){
+    return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function(match, p1){
+      return String.fromCharCode('0x' + p1);
+    }));
+  }
+  function b64DecodeUnicode(str){
+    return decodeURIComponent(Array.prototype.map.call(atob(str), function(c){
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+  }
+  function encodeState(obj){ return encodeURIComponent(b64EncodeUnicode(JSON.stringify(obj))); }
+  function decodeState(str){
+    try { return JSON.parse(b64DecodeUnicode(decodeURIComponent(str))); }
+    catch(e){ return null; }
+  }
+  function setVal(name, val){
+    if(val === undefined || val === null) return;
+    var el = form.querySelector('[name=' + name + ']');
+    if(el) el.value = val;
+  }
+  function buildReviewLink(level, stateObj){
+    return window.location.origin + window.location.pathname + '?level=' + level + '&state=' + encodeState(stateObj);
+  }
+
+  var urlParams = new URLSearchParams(window.location.search);
+  var reviewLevel = urlParams.get('level') ? parseInt(urlParams.get('level'), 10) : null;
+  var reviewState = urlParams.get('state') ? decodeState(urlParams.get('state')) : null;
+
+  function enterReviewMode(state, level){
+    document.body.classList.add('review-mode');
+
+    setVal('employeeName', state.employeeName);
+    setVal('manager', state.manager);
+    setVal('email', state.email);
+    setVal('fromCity', state.fromCity);
+    setVal('toCity', state.toCity);
+    setVal('departDate', state.departDate);
+    setVal('returnDate', state.returnDate);
+    setVal('purpose', state.purpose);
+    document.getElementById('reqNum').textContent = state.requestNum || '';
+    document.getElementById('reqDate').textContent = state.dateSubmitted || '';
+
+    if(state.needs){
+      var needsArr = state.needs.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+      form.querySelectorAll('[name=needs]').forEach(function(cb){
+        cb.checked = needsArr.indexOf(cb.value) !== -1;
+      });
+    }
+
+    // Replace the itemized cost table with a simple total (breakdown wasn't carried in the link)
+    var costTable = document.querySelector('.cost-table');
+    if(costTable){
+      var costSection = costTable.closest('section');
+      costTable.style.display = 'none';
+      var addRowNote = costSection.querySelector('.add-row-note');
+      if(addRowNote) addRowNote.style.display = 'none';
+      var totalP = document.createElement('p');
+      totalP.innerHTML = '<b>Total Estimated Cost:</b> ' + (state.totalCost || '$0.00') +
+        (state.documentsAttached ? ' &nbsp;|&nbsp; <b>Documents attached at submission:</b> ' + state.documentsAttached : '');
+      costSection.appendChild(totalP);
+    }
+
+    // Document upload isn't needed again in review mode
+    var uploadBoxEl = document.getElementById('uploadBox');
+    if(uploadBoxEl){
+      var uploadSection = uploadBoxEl.closest('section');
+      if(uploadSection) uploadSection.style.display = 'none';
+    }
+    var fi = currentFileInput();
+    if(fi) fi.required = false;
+
+    // Funding & Comments wasn't carried in the link - hide it in review mode
+    form.querySelectorAll('h2').forEach(function(h){
+      if(h.textContent.indexOf('Funding') !== -1 && h.closest('section')){
+        h.closest('section').style.display = 'none';
+      }
+    });
+
+    // Lock the submitted fields - reviewers approve/deny, they don't edit the request
+    form.querySelectorAll('.grid2 input, .grid2 select, .grid2 textarea, .checkgrid input').forEach(function(el){
+      el.disabled = true;
+    });
+
+    // No new submission happening on this view
+    document.getElementById('submitBtn').style.display = 'none';
+    document.getElementById('submitHint').style.display = 'none';
+    document.getElementById('resetBtn').style.display = 'none';
+
+    // Restore any decisions already recorded earlier in the chain
+    [1,2,3].forEach(function(n){
+      if(state['level' + n + 'Name']) setVal('level' + n + 'Name', state['level' + n + 'Name']);
+      if(state['level' + n + 'Date']) setVal('level' + n + 'Date', state['level' + n + 'Date']);
+      if(state['level' + n + 'Decision']){
+        var sel = form.querySelector('[name=level' + n + 'Decision]');
+        if(sel){ sel.value = state['level' + n + 'Decision']; updateDecisionClass(sel); }
+      }
+    });
+
+    // Pre-fill the current approver's name/date if not already set
+    if(level && !state['level' + level + 'Name']) setVal('level' + level + 'Name', ROLE_LABELS[level]);
+    if(level && !state['level' + level + 'Date']) setVal('level' + level + 'Date', new Date().toISOString().slice(0,10));
+
+    // Only the current, undecided level's Approve/Deny buttons are active
+    [1,2,3].forEach(function(n){
+      var card = document.getElementById('level' + n + 'Card');
+      var approveBtn = card.querySelector('.approve-btn');
+      var denyBtn = card.querySelector('.deny-btn');
+      var isCurrent = (n === level) && !state['level' + n + 'Decision'];
+      approveBtn.disabled = !isCurrent;
+      denyBtn.disabled = !isCurrent;
+      var nameInput = card.querySelector('[name=level' + n + 'Name]');
+      var dateInput = card.querySelector('[name=level' + n + 'Date]');
+      if(!isCurrent){
+        if(nameInput) nameInput.disabled = true;
+        if(dateInput) dateInput.disabled = true;
+      }
+    });
+
+    status.className = 'ok';
+    status.innerHTML = level
+      ? ('<b>Reviewing request ' + (state.requestNum || '') + '.</b> You are the Level ' + level + ' approver (' + ROLE_LABELS[level] + '). Use the Approve or Deny button in your box below.')
+      : ('<b>Viewing submitted request ' + (state.requestNum || '') + '.</b>');
+  }
 
   // ---- Request metadata ----
   var today = new Date();
@@ -769,6 +933,10 @@
   }
   addAdminControls();
   updateSubmitState();
+
+  if(reviewState){
+    enterReviewMode(reviewState, reviewLevel);
+  }
 
   // ---- Admin mode toggle ----
   function setAdminMode(on){
@@ -928,6 +1096,72 @@
       updateSubmitState();
       return;
     }
+
+    if(t.classList.contains('approve-btn') || t.classList.contains('deny-btn')){
+      e.preventDefault();
+      var card = t.closest('.approval-card');
+      var levelNum = parseInt(card.id.replace('level', '').replace('Card', ''), 10);
+      var decision = t.classList.contains('approve-btn') ? 'Approved' : 'Rejected';
+      var nameInput = card.querySelector('[name=level' + levelNum + 'Name]');
+      var dateInput = card.querySelector('[name=level' + levelNum + 'Date]');
+      var sel = card.querySelector('[name=level' + levelNum + 'Decision]');
+      if(sel){ sel.value = decision; updateDecisionClass(sel); }
+
+      var newState = Object.assign({}, reviewState || {});
+      newState['level' + levelNum + 'Name'] = nameInput ? nameInput.value : '';
+      newState['level' + levelNum + 'Date'] = dateInput ? dateInput.value : '';
+      newState['level' + levelNum + 'Decision'] = decision;
+
+      card.querySelector('.approve-btn').disabled = true;
+      card.querySelector('.deny-btn').disabled = true;
+      if(nameInput) nameInput.disabled = true;
+      if(dateInput) dateInput.disabled = true;
+
+      var nextLevel = levelNum + 1;
+      var nextLink = (decision === 'Approved' && nextLevel <= 3) ? buildReviewLink(nextLevel, newState) : '';
+
+      var outPayload = {
+        requestNum: newState.requestNum,
+        employeeName: newState.employeeName,
+        manager: newState.manager,
+        email: newState.email,
+        fromCity: newState.fromCity,
+        toCity: newState.toCity,
+        departDate: newState.departDate,
+        returnDate: newState.returnDate,
+        purpose: newState.purpose,
+        needs: newState.needs,
+        totalCost: newState.totalCost,
+        documentsAttached: newState.documentsAttached,
+        decision: decision,
+        approverLevel: levelNum,
+        approverName: newState['level' + levelNum + 'Name'],
+        approverDate: newState['level' + levelNum + 'Date'],
+        nextReviewLink: nextLink
+      };
+
+      var hookBody = new URLSearchParams();
+      Object.keys(outPayload).forEach(function(k){
+        hookBody.append(k, outPayload[k] === undefined || outPayload[k] === null ? '' : outPayload[k]);
+      });
+
+      status.className = 'ok';
+      status.innerHTML = '<b>Recording your decision&hellip;</b>';
+
+      fetch(APPROVE_WEBHOOKS[levelNum], { method: 'POST', mode: 'cors', body: hookBody }).then(function(){
+        if(decision === 'Approved'){
+          status.innerHTML = nextLevel <= 3
+            ? '<b>Approved.</b> Level ' + nextLevel + ' (' + ROLE_LABELS[nextLevel] + ') has been notified.'
+            : '<b>Approved.</b> This request is now fully approved — the requester has been notified.';
+        } else {
+          status.innerHTML = '<b>Marked as denied.</b> The request will not proceed further.';
+        }
+      }).catch(function(){
+        status.className = 'err';
+        status.innerHTML = '<b>Your decision was recorded on this page, but the notification failed to send.</b> Please contact the requester directly.';
+      });
+      return;
+    }
   });
 
   document.getElementById('printBtn').addEventListener('click', function(){
@@ -978,8 +1212,23 @@
       needs: needs.join(', '),
       totalCost: totalEl.textContent,
       documentsAttached: selectedFiles.length,
-      formLink: window.location.href
+      formLink: ''
     };
+    payload.formLink = buildReviewLink(1, {
+      requestNum: payload.requestNum,
+      dateSubmitted: payload.dateSubmitted,
+      employeeName: payload.employeeName,
+      manager: payload.manager,
+      email: payload.email,
+      fromCity: payload.fromCity,
+      toCity: payload.toCity,
+      departDate: payload.departDate,
+      returnDate: payload.returnDate,
+      purpose: payload.purpose,
+      needs: payload.needs,
+      totalCost: payload.totalCost,
+      documentsAttached: payload.documentsAttached
+    });
 
     status.className = 'ok';
     status.innerHTML = '<b>Request ' + payload.requestNum + ' is ready.</b><br>' +
